@@ -189,6 +189,7 @@ function ENT:Draw()
         end
     end
 
+    eDrawModel(self)
     eCreateShadow(self)
 end
 

@@ -246,6 +246,7 @@ function ENT:Draw()
 
     ApplyWeaponOffsets(self, wep, eGetTable(wep))
 
+    eDrawModel(self)
     eCreateShadow(self)
 end
 
