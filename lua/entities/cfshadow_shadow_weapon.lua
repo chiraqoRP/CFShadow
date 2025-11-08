@@ -36,17 +36,30 @@ local pGetActiveWeapon = PLAYER.GetActiveWeapon
 local eGetNumBodyGroups = ENTITY.GetNumBodyGroups
 local eGetBodygroup = ENTITY.GetBodygroup
 local eSetBodygroup = ENTITY.SetBodygroup
+local eGetRenderBounds = ENTITY.GetRenderBounds
+local eSetRenderBounds = ENTITY.SetRenderBounds
+local cwMin, cwMax = Vector(-32, -32, -32), Vector(32, 32, 32)
 local eSetNextClientThink = ENTITY.SetNextClientThink
 local aCurTime = CurTime
 local aIsValid = IsValid
 
 function ENT:Think()
     local wep = pGetActiveWeapon(ply)
-    local wepValid = aIsValid(wep) and wep != NULL
 
-    if wepValid then
+    if aIsValid(wep) then
         for i = 1, eGetNumBodyGroups(wep) do
             eSetBodygroup(self, i, eGetBodygroup(wep, i))
+        end
+
+        local wMin, wMax = eGetRenderBounds(self)
+        local sMin, sMax = eGetRenderBounds(wep)
+        local base = wep.Base
+
+        -- HACK: Fixes CW2 weapons not drawing randomly.
+        if wMin != cwMin and wMax != cwMax and base == "cw_base" then
+            eSetRenderBounds(self, cwMin, cwMax)
+        elseif wMin != sMin and wMax != sMax and base != "cw_base" then
+            eSetRenderBounds(self, eGetRenderBounds(wep))
         end
     end
 
@@ -60,16 +73,17 @@ function ENT:Think()
 end
 
 local arc9Ang = Angle(-5, 0, 180)
+local eGetParent = ENTITY.GetParent
 
 local getOffsetFuncs = {
-    ["arc9_base"] = function(wep, wepTable)
+    ["arc9_base"] = function(ent, wep, wepTable)
         local wmOffsets = wepTable.WorldModelOffset
         local shouldTPIK = wep:ShouldTPIK()
 
         return shouldTPIK and wmOffsets.TPIKPos or wmOffsets.Pos, shouldTPIK and wmOffsets.TPIKAng or wmOffsets.Ang or arc9Ang, wmOffsets.Scale
     end,
     -- ISSUE: Impossible(?) to fix, base implementation relies on .WMModel which doesn't draw unless localplayer does.
-    ["arccw_base"] = function(wep, wepTable)
+    ["arccw_base"] = function(ent, wep, wepTable)
         local wmOffsets = wepTable.WorldModelOffset
 
         if !wmOffsets then
@@ -121,7 +135,7 @@ local getOffsetFuncs = {
 
         return apos, aang, vs
     end,
-    ["cw_base"] = function(wep, wepTable)
+    ["cw_base"] = function(ent, wep, wepTable)
         if wepTable.DrawTraditionalWorldModel then
             return
         end
@@ -129,15 +143,16 @@ local getOffsetFuncs = {
         local wm = wepTable.WMEnt
 
         if aIsValid(wm) then
-            local hand = ply:LookupBone("ValveBiped.Bip01_R_Hand")
+            local parent = eGetParent(ent)
+            local hand = parent:LookupBone("ValveBiped.Bip01_R_Hand")
 
             if hand then
-                local pos, ang = ply:GetBonePosition(hand)
+                local pos, ang = parent:GetBonePosition(hand)
 
                 if pos and ang then
                     ang:RotateAroundAxis(ang:Right(), wepTable.WMAng.x)
                     ang:RotateAroundAxis(ang:Up(), wepTable.WMAng.y)
-                    ang:RotateAroundAxis(ang:Forward(), wepTable.WMAng.y)
+                    ang:RotateAroundAxis(ang:Forward(), wepTable.WMAng.z)
 
                     pos = pos + wepTable.WMPos.x * ang:Right()
                     pos = pos + wepTable.WMPos.y * ang:Forward()
@@ -164,7 +179,7 @@ local function ApplyWeaponOffsets(ent, wep, wepTable)
     local getOffsetFunc = getOffsetFuncs[wepTable.Base]
 
     if getOffsetFunc then
-        origin, angles, scale = getOffsetFunc(wep, wepTable)
+        origin, angles, scale = getOffsetFunc(ent, wep, wepTable)
     end
 
     if !origin then
@@ -208,7 +223,7 @@ function ENT:Draw()
     local wep = pGetActiveWeapon(ply)
 
     -- COMMENT
-    if !aIsValid(wep) or wep == NULL then
+    if !aIsValid(wep) then
         return
     end
 
