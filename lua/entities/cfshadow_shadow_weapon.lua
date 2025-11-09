@@ -90,7 +90,7 @@ local getOffsetFuncs = {
             return
         end
 
-        local vm = ply
+        local vm = ent
 
         if wepTable.MirrorVMWM then
             vm = wep
@@ -143,11 +143,10 @@ local getOffsetFuncs = {
         local wm = wepTable.WMEnt
 
         if aIsValid(wm) then
-            local parent = eGetParent(ent)
-            local hand = parent:LookupBone("ValveBiped.Bip01_R_Hand")
+            local hand = ent:LookupBone("ValveBiped.Bip01_R_Hand")
 
             if hand then
-                local pos, ang = parent:GetBonePosition(hand)
+                local pos, ang = ent:GetBonePosition(hand)
 
                 if pos and ang then
                     ang:RotateAroundAxis(ang:Right(), wepTable.WMAng.x)
@@ -179,7 +178,10 @@ local function ApplyWeaponOffsets(ent, wep, wepTable)
     local getOffsetFunc = getOffsetFuncs[wepTable.Base]
 
     if getOffsetFunc then
-        origin, angles, scale = getOffsetFunc(ent, wep, wepTable)
+        local parent = eGetParent(ent)
+        parent = aIsValid(parent) and parent or ply
+
+        origin, angles, scale = getOffsetFunc(parent, wep, wepTable)
     end
 
     if !origin then
