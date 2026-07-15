@@ -160,20 +160,23 @@ local waterRT = {
     _rt_waterrefraction = true
 }
 
-function ENT:Draw()
+function ENT:Draw(flags)
     eDestroyShadow(self)
 
-    -- COMMENT
+    local isDepthPass = bit.band(flags, STUDIO_SSAODEPTHTEXTURE) != 0 or bit.band(flags, STUDIO_SHADOWDEPTHTEXTURE) != 0
+
+    if isDepthPass then
+        return
+    end
+
     if !aIsValid(ply) or !pAlive(ply) then
         return
     end
 
-    -- COMMENT
     if pInVehicle(ply) or pShouldDrawLocalPlayer(ply) then
         return
     end
 
-    -- COMMENT
     if pFlashlightIsOn(ply) or pGetObserverMode(ply) != OBS_MODE_NONE then
         return
     end

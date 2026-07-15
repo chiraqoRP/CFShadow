@@ -156,7 +156,7 @@ local getOffsetFuncs = {
                     pos = pos + wepTable.WMPos.x * ang:Right()
                     pos = pos + wepTable.WMPos.y * ang:Forward()
                     pos = pos + wepTable.WMPos.z * ang:Up()
-                    
+
                     return pos, ang
                 end
             else
@@ -214,8 +214,14 @@ local waterRT = {
     _rt_waterrefraction = true
 }
 
-function ENT:Draw()
+function ENT:Draw(flags)
     eDestroyShadow(self)
+
+    local isDepthPass = bit.band(flags, STUDIO_SSAODEPTHTEXTURE) != 0 or bit.band(flags, STUDIO_SHADOWDEPTHTEXTURE) != 0
+
+    if isDepthPass then
+        return
+    end
 
     -- COMMENT
     if !aIsValid(ply) or !pAlive(ply) then
